@@ -1,0 +1,62 @@
+# 1) docker network ls
+# Lista todas las redes disponibles en Docker
+
+# Columnas:
+# NETWORK ID → identificador único de la red
+# NAME       → nombre de la red
+# DRIVER     → tipo de red (cómo se implementa)
+# SCOPE      → alcance (local = solo este host)
+
+# Redes por defecto:
+# bridge → red por defecto. Los contenedores se comunican entre sí dentro de ese bridge virtual
+# host   → el contenedor usa directamente la red del host (no hay aislamiento de red)
+# none   → el contenedor NO tiene red
+
+# Conceptos:
+# host → es la máquina física o VM donde corre Docker
+# bridge → es una red virtual interna de Docker (como un switch virtual)
+# null (none) → sin conectividad de red
+
+
+# 2) docker network create puente
+# Crea una nueva red llamada "puente"
+
+# Por defecto usa driver bridge:
+# - Crea un bridge virtual nuevo (aislado del bridge default)
+# - Permite que contenedores conectados a esa red se vean por nombre
+
+# La salida:
+# 28b968d13135... → es el ID de la red creada
+
+
+# 3) docker network ls (otra vez)
+# Ahora aparece:
+# puente → nueva red creada (driver bridge)
+
+# Diferencia clave:
+# bridge (default) → todos los contenedores sin red explícita caen acá
+# puente (custom)  → red aislada que vos controlás (mejor práctica)
+
+
+# 4) docker inspect web
+# Muestra TODA la configuración del contenedor "web" en formato JSON
+
+# Incluye:
+# - Configuración de red (Networks, IP, Gateway)
+# - Volúmenes montados
+# - Puertos expuestos (PortBindings)
+# - Imagen usada
+# - Variables de entorno
+# - Estado del contenedor
+
+# Para redes vas a ver algo como:
+# "Networks": {
+#   "bridge": {
+#     "IPAddress": "172.17.0.2",
+#     "Gateway": "172.17.0.1"
+#   }
+# }
+
+# Esto indica:
+# - El contenedor está conectado a la red bridge
+# - Tiene una IP interna dentro de Docker

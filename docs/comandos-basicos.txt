@@ -1,0 +1,151 @@
+# ============================================================
+# DOCKER - COMANDOS BÁSICOS + FLAGS
+# ============================================================
+
+# ------------------------------------------------------------
+# DIFERENCIA ENTRE "-" Y "--"
+# ------------------------------------------------------------
+# -  → opción corta (short flag)
+# -- → opción larga (long flag)
+#
+# Ejemplo equivalente:
+# docker ps -a
+# docker ps --all
+#
+# Regla:
+# - una letra → "-"
+# - palabra completa → "--"
+
+# ============================================================
+# 1. docker ps → listar contenedores
+# ============================================================
+docker ps
+docker ps -a
+
+# Flags:
+# -a / --all → muestra todos los contenedores (incluye detenidos)
+# -q         → solo IDs
+
+# Ejemplo útil:
+docker ps -aq
+
+
+# ============================================================
+# 2. docker run → crear y ejecutar contenedor
+# ============================================================
+docker run nginx
+
+# Flags:
+# -d / --detach   → ejecutar en segundo plano
+# -p / --publish  → mapear puertos (host:container)
+# --name          → nombre del contenedor
+# -e              → variables de entorno
+# --rm            → eliminar al detenerse
+
+# Ejemplo:
+docker run -d -p 80:80 --name web nginx
+
+
+# ============================================================
+# 3. docker stop → detener contenedor
+# ============================================================
+docker stop <id|name>
+
+# Flags:
+# -t / --time → tiempo de espera antes de forzar kill
+
+
+# ============================================================
+# 4. docker start → iniciar contenedor detenido
+# ============================================================
+docker start <id|name>
+
+# Flags:
+# -a / --attach → conecta a la salida del contenedor
+
+
+# ============================================================
+# 5. docker rm → eliminar contenedor
+# ============================================================
+docker rm <id>
+
+# Flags:
+# -f / --force → fuerza eliminación (aunque esté corriendo)
+# -v           → elimina volúmenes asociados
+
+# Ejemplo masivo:
+docker rm -f $(docker ps -aq)
+
+
+# ============================================================
+# 6. docker images → listar imágenes
+# ============================================================
+docker images
+
+# Flags:
+# -a → todas las capas/intermedias
+# -q → solo IDs
+
+
+# ============================================================
+# 7. docker rmi → eliminar imagen
+# ============================================================
+docker rmi <image>
+
+# Flags:
+# -f → forzar eliminación
+
+
+# ============================================================
+# 8. docker logs → ver logs de contenedor
+# ============================================================
+docker logs <container>
+
+# Flags:
+# -f       → follow (stream en vivo)
+# --tail N → últimas N líneas
+
+# Ejemplo:
+docker logs -f --tail 100 web
+
+
+# ============================================================
+# 9. docker exec → ejecutar comando dentro del contenedor
+# ============================================================
+docker exec -it <container> bash
+
+# Flags:
+# -i → modo interactivo
+# -t → pseudo terminal (TTY)
+
+
+# ============================================================
+# 10. docker build → construir imagen
+# ============================================================
+docker build .
+
+# Flags:
+# -t → nombre:tag de la imagen
+# -f → Dockerfile específico
+
+# Ejemplo:
+docker build -t mi-app:latest .
+
+
+# ============================================================
+# RESUMEN DE FLAGS COMUNES
+# ============================================================
+# -a / --all       → todos
+# -d / --detach    → segundo plano
+# -p / --publish   → puertos
+# -f / --force     → forzar
+# -q               → solo IDs
+# -it              → interactivo + terminal
+
+# ============================================================
+# TIP DEVOPS
+# ============================================================
+# - En scripts → usar --long (más claro)
+# - En terminal → usar -short (más rápido)
+# - Se pueden combinar flags:
+docker run -dit nginx

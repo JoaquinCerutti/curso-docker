@@ -1,0 +1,65 @@
+docker run -it -d -p 8080:80 -v ./sitio:/usr/share/nginx/html/sitio --name web nginx
+
+docker
+# Ejecuta el cliente de Docker.
+
+run
+# Crea y arranca un contenedor nuevo a partir de una imagen.
+
+-it
+# Son dos flags juntas:
+# -i  => mantiene STDIN abierto para poder interactuar con el contenedor.
+# -t  => asigna una terminal (TTY).
+# Se usan cuando querés interacción por consola.
+
+-d
+# Ejecuta el contenedor en segundo plano (detached mode).
+# O sea, el contenedor queda corriendo y la terminal vuelve a quedar libre.
+
+-p 8080:80
+# Publica un puerto del contenedor en tu máquina.
+# Formato: -p puerto_host:puerto_contenedor
+# En este caso:
+# 8080 = puerto de tu PC
+# 80   = puerto del contenedor
+# Entonces, si abrís http://localhost:8080
+# entrás al puerto 80 de Nginx dentro del contenedor.
+
+-v ./sitio:/usr/share/nginx/html/sitio
+# Monta un volumen/bind mount.
+# Formato: -v ruta_local:ruta_contenedor
+# En este caso:
+# ./sitio                           = carpeta local, relativa al directorio actual
+# /usr/share/nginx/html/sitio      = carpeta dentro del contenedor
+# Lo que pongas en ./sitio en tu PC se verá dentro del contenedor en esa ruta.
+# Sirve para que Nginx lea archivos HTML/CSS/JS desde tu máquina sin reconstruir la imagen.
+
+--name web
+# Le pone nombre al contenedor.
+# En vez de un nombre aleatorio, el contenedor se llamará "web".
+# Después podés usar comandos como:
+# docker stop web
+# docker start web
+# docker logs web
+
+nginx
+# Es la imagen que Docker va a usar para crear el contenedor.
+# Si no la tenés descargada localmente, Docker la intenta bajar desde Docker Hub.
+
+# Interpretación completa:
+# "Creá y ejecutá un contenedor llamado web, usando la imagen nginx,
+# en segundo plano, con terminal interactiva, exponiendo localhost:8080
+# hacia el puerto 80 del contenedor, y montando la carpeta local ./sitio
+# dentro de /usr/share/nginx/html/sitio."
+
+# Ojo con este detalle:
+# Nginx por defecto sirve archivos desde:
+# /usr/share/nginx/html
+# pero vos montaste:
+# /usr/share/nginx/html/sitio
+# Entonces Nginx no necesariamente va a mostrar automáticamente el contenido de ./sitio
+# en la raíz del sitio, salvo que tengas una configuración que apunte a esa subcarpeta.
+
+# Si querés que el contenido de ./sitio sea el sitio principal,
+# normalmente sería más común usar:
+# -v ./sitio:/usr/share/nginx/html

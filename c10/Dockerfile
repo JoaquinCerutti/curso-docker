@@ -4,9 +4,13 @@ FROM nginx:latest
 # Copiar el archivo index.html al directorio 
 # de nginx que carga el html como sitio web
 
-COPY ./sitio/index.html /usr/share/nginx/html/index.html
+COPY ./sitio/index.html /usr/share/nginx/sitio/html/index.html
+
+VOLUME [ "/sitio", "/usr/share/nginx/html/sitio" ]
 
 # docker run -it --rm -d -p 8080:80 --name web sitio-web
 
 # -p PUERTO_HOST:PUERTO_CONTENEDOR
 # Navegador -> http://localhost:8080 -> (Docker redirige) -> contenedor -> Nginx puerto 80
+
+
