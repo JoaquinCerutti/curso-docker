@@ -1,0 +1,95 @@
+MultiStage
+
+# MULTISTAGE BUILD EN DOCKER
+
+# Es una técnica que permite usar múltiples "stages" (etapas) dentro de un mismo Dockerfile.
+# Cada stage puede tener su propia imagen base y propósito (build, test, runtime, etc).
+
+# IDEA CLAVE:
+# - En la etapa de build instalás TODO (compiladores, dependencias pesadas, etc)
+# - En la etapa final copiás SOLO lo necesario (binarios o app ya compilada)
+# => Resultado: imágenes mucho más livianas y seguras.
+
+Sin multistage:
+Imagen final = build tools + código + basura
+
+Con multistage:
+Imagen final = SOLO app lista para correr
+
+# --------------------------------------------------
+# ¿POR QUÉ OPTIMIZA TAMAÑO?
+# --------------------------------------------------
+# Porque descartás:
+# - Compiladores (gcc, dotnet sdk, node build tools, etc)
+# - Dependencias de build
+# - Archivos temporales
+# - Código fuente innecesario
+
+# Solo queda lo que realmente se ejecuta.
+
+# --------------------------------------------------
+# EJEMPLO SIMPLE (NODE)
+# --------------------------------------------------
+
+# Stage 1: build
+FROM node:18 AS build
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Stage 2: runtime (imagen liviana)
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copiamos SOLO lo necesario del stage anterior
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY package*.json ./
+
+CMD ["node", "dist/index.js"]
+
+
+
+
+docker scout quickview nombreimagen:x.x
+
+Nos permite analizar vulnerabilidades de la imagen y también
+podemos ver en más info. la vulnerabilidad en cuestión y como 
+mitigarla. 
+
+
+
+Imágenes distroless
+
+Es un concepto, eliminar la mayor cantidad de capas dejando solo las necesarias, dando 
+lugar a una imagen muy optimizada de poco tamaño (imagen distroless!)
+
+https://github.com/GoogleContainerTools/distroless
+
+
+
+Imágenes multiplataforma
+
+Se adaptan a más de una arquitectura de computadora.  Es de mayor tamaño
+y tarda más el build de imágenes. Generalmente arm es para IoT.
+
+docker build --platform=linux/amd64,linux/arm64 -t dockerscan2 .
+
+
+
+Acelerar Builds
+
+Docker cache: caché inteligente, acelera cada vez más el proceso de creación de imágenes. 
+Podemos ver que muchas veces en los logs del build dice "cached"
+
+--no-cache para evitar usarlo en el build
+
+
+
+
+
+
