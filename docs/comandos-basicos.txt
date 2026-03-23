@@ -133,6 +133,20 @@ docker build -t mi-app:latest .
 
 
 # ============================================================
+# 11. docker exec -it nombreContenedor /bin/bash
+# ============================================================
+Acceder a consola del contenedor
+
+# ============================================================
+# 12. Save y Load
+# ============================================================
+
+docker save -o namearchivo.tar nameImagen
+docker load --input namearchivo.rar
+
+
+
+# ============================================================
 # RESUMEN DE FLAGS COMUNES
 # ============================================================
 # -a / --all       → todos

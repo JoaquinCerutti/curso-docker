@@ -1,0 +1,45 @@
+version: x.x  ESTÁ DEPRECADO, NO SE USA
+
+
+# Permite levantar varios servicios (contenedores) con un solo comando,
+# usando un archivo de configuración llamado docker-compose.yml.
+
+# En ese archivo se definen:
+# - servicios (containers)
+# - imágenes
+# - puertos
+# - volúmenes
+# - redes
+# - variables de entorno
+
+# Ejemplo de estructura:
+version: "3.9"
+services:
+  web:
+    image: nginx
+    ports:
+      - "8080:80"
+
+  db:
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+
+# Comando principal:
+docker compose up
+
+# Qué hace:
+# - crea la red
+# - descarga imágenes si no existen
+# - crea y levanta los contenedores
+# - conecta los servicios entre sí
+
+# Ventaja clave:
+# Orquestás múltiples contenedores como una sola aplicación
+
+
+docker compose build 
+para ejecutar el docker-compose.yml
+
+luego de tener todo listo puedo tirar
+docker compose up

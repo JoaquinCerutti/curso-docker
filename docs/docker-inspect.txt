@@ -1,0 +1,107 @@
+# docker inspect devuelve un JSON completo con TODA la metadata del objeto
+# (contenedor, imagen, volumen, network, etc.)
+
+docker inspect <container_id|name>
+
+# ==============================
+# ESTRUCTURA GENERAL DEL OUTPUT
+# ==============================
+
+[
+  {
+    "Id": "...",                  # ID único del contenedor
+    "Created": "...",             # Fecha de creación
+
+    "Path": "...",                # Comando ejecutado (entrypoint)
+    "Args": [...],                # Argumentos del comando
+
+    "State": {                   # ESTADO ACTUAL DEL CONTENEDOR
+      "Status": "running",        # running, exited, paused
+      "Running": true,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,         # si fue matado por falta de memoria
+      "Dead": false,
+      "Pid": 1234,                # PID del proceso dentro del host
+      "ExitCode": 0,              # código de salida si terminó
+      "Error": "",
+      "StartedAt": "...",
+      "FinishedAt": "..."
+    },
+
+    "Image": "...",              # ID de la imagen usada
+    "Name": "/nombre",           # nombre del contenedor
+
+    "HostConfig": {              # CONFIGURACIÓN DEL HOST (cómo corre)
+      "NetworkMode": "bridge",   # tipo de red
+      "PortBindings": {          # puertos expuestos
+        "80/tcp": [
+          {
+            "HostPort": "8080"   # puerto host -> contenedor
+          }
+        ]
+      },
+      "Binds": [                 # volúmenes montados
+        "/host/path:/container/path"
+      ],
+      "RestartPolicy": {         # política de reinicio
+        "Name": "always"
+      }
+    },
+
+    "Config": {                  # CONFIG INTERNA DEL CONTENEDOR
+      "Hostname": "...",
+      "Env": [                   # variables de entorno
+        "VAR=valor"
+      ],
+      "Cmd": [...],              # comando por defecto
+      "Image": "...",            # imagen base
+      "WorkingDir": "...",
+      "Entrypoint": [...],
+      "Labels": {                # metadata (ej: docker-compose)
+      }
+    },
+
+    "NetworkSettings": {         # RED DEL CONTENEDOR
+      "IPAddress": "172.x.x.x",  # IP interna
+      "Gateway": "172.x.x.1",
+      "Networks": {
+        "bridge": {
+          "IPAddress": "172.x.x.x",
+          "MacAddress": "...",
+          "Gateway": "..."
+        }
+      }
+    },
+
+    "Mounts": [                  # VOLUMENES MONTADOS (más claro que Binds)
+      {
+        "Type": "bind",          # bind | volume
+        "Source": "/host/path",
+        "Destination": "/container/path",
+        "Mode": "rw",
+        "RW": true
+      }
+    ]
+  }
+]
+
+# ==============================
+# IDEAS CLAVE
+# ==============================
+
+# - docker inspect = debugging total
+# - ves TODO: red, volúmenes, variables, estado, puertos
+# - diferencia importante:
+#   HostConfig -> cómo el host ejecuta el contenedor
+#   Config     -> cómo está definido el contenedor internamente
+#   State      -> estado runtime
+#   NetworkSettings -> networking real
+
+# ==============================
+# FILTRAR INFO (MUY USADO)
+# ==============================
+
+docker inspect -f '{{.State.Status}}' <container>
+docker inspect -f '{{.NetworkSettings.IPAddress}}' <container>
+docker inspect -f '{{.Mounts}}' <container>

@@ -1,0 +1,97 @@
+# ==============================
+# LOGIN DOCKER HUB
+# ==============================
+
+# Login básico (te pide user/pass)
+docker login
+
+# Login con usuario específico
+docker login -u <usuario>
+
+# Login usando password por stdin (más seguro para CI/CD)
+echo "<password>" | docker login -u <usuario> --password-stdin
+
+# Login contra registry específico (no Docker Hub)
+docker login <registry-url>
+
+
+# ==============================
+# BUILD IMAGEN
+# ==============================
+
+# Build básico desde Dockerfile en el directorio actual
+docker build -t <usuario>/<imagen>:<tag> .
+
+# Build con nombre y tag explícito
+docker build -t joaquin/app:1.0 .
+
+# Build usando Dockerfile custom
+docker build -f Dockerfile.dev -t <usuario>/<imagen>:<tag> .
+
+# Build sin usar cache
+docker build --no-cache -t <usuario>/<imagen>:<tag> .
+
+# Build pasando argumentos (ARG en Dockerfile)
+docker build --build-arg ENV=prod -t <usuario>/<imagen>:<tag> .
+
+# Build para múltiples plataformas (requiere buildx)
+docker buildx build --platform linux/amd64,linux/arm64 -t <usuario>/<imagen>:<tag> .
+
+# Build y push directo (buildx)
+docker buildx build --push -t <usuario>/<imagen>:<tag> .
+
+
+# ==============================
+# TAG (IMPORTANTE PARA PUSH)
+# ==============================
+
+# Etiquetar imagen local para Docker Hub
+docker tag <imagen_local>:<tag> <usuario>/<imagen>:<tag>
+
+# Ejemplo
+docker tag app:latest joaquin/app:latest
+
+
+# ==============================
+# PUSH (SUBIR IMAGEN)
+# ==============================
+
+# Push básico
+docker push <usuario>/<imagen>:<tag>
+
+# Push de todas las tags de una imagen
+docker push <usuario>/<imagen> --all-tags
+
+# Push a registry privado
+docker push <registry-url>/<usuario>/<imagen>:<tag>
+
+
+# ==============================
+# PULL (DESCARGAR IMAGEN)
+# ==============================
+
+# Pull básico
+docker pull <usuario>/<imagen>:<tag>
+
+# Pull latest (por defecto)
+docker pull <usuario>/<imagen>
+
+# Pull de plataforma específica
+docker pull --platform linux/amd64 <usuario>/<imagen>:<tag>
+
+# Pull desde registry privado
+docker pull <registry-url>/<usuario>/<imagen>:<tag>
+
+
+# ==============================
+# INSPECCIÓN / AUXILIARES
+# ==============================
+
+# Ver imágenes locales
+docker images
+
+# Ver info de una imagen remota
+docker manifest inspect <usuario>/<imagen>:<tag>
+
+# Borrar imagen local
+docker rmi <usuario>/<imagen>:<tag>
