@@ -55,11 +55,14 @@ CMD ["node", "dist/index.js"]
 
 
 
+
 docker scout quickview nombreimagen:x.x
 
 Nos permite analizar vulnerabilidades de la imagen y también
 podemos ver en más info. la vulnerabilidad en cuestión y como 
 mitigarla. 
+
+
 
 
 
@@ -72,12 +75,16 @@ https://github.com/GoogleContainerTools/distroless
 
 
 
+
+
 Imágenes multiplataforma
 
 Se adaptan a más de una arquitectura de computadora.  Es de mayor tamaño
 y tarda más el build de imágenes. Generalmente arm es para IoT.
 
 docker build --platform=linux/amd64,linux/arm64 -t dockerscan2 .
+
+
 
 
 
@@ -91,5 +98,85 @@ Podemos ver que muchas veces en los logs del build dice "cached"
 
 
 
+Reducir imágenes en docker
+Es de suma importancia debido a la cantidad desplegada en sistemas distribuidos
 
 
+
+Reducir capas de imágenes
+Reducir pasos nos permite reducir el tamaño final
+
+RUN apt update \ 
+    && apt-get install -y curl \
+    && rm -rf /var/lib/apt/lists/*
+
+
+
+
+.dockerignore
+Ignora todos los elementos aclarados acá a la hora de subir imagenes
+
+
+
+
+docker prune
+Nos es útil usar los comandos para limpiar imagenes, contenedores, volúmenes entre otras cosas no usadas.
+
+
+
+
+Docker y permisos
+Todas las imagenes que uno crea, se crean con el usuario root
+
+
+
+6 prácticas recomendadas para sacar imagenes a producción:
+
+1. Usar imágenes oficiales.
+2. Evitar usar latest, puede presentar detalles/errores.
+3. Imagenes alpine son de reducido tamaño --> muy buena práctica.
+4. Agregar multistage a las imagenes.
+5. Eliminar constantemente archivos no utilizados en docker (prune).
+6. Crear usuarios dentro del archivo docker, evitar el usuario root por defecto.
+
+
+
+
+
+
+Subir imagenes a microsoft azure
+No es un dockerhub, es privado
+
+Creamos un Container Registry "*name*.azurecr.io" por ejemplo
+
+En consola:
+
+az login
+az account show
+docker --version
+docker ps
+az acr login -n registryjoaquin
+
+ docker build -t *name*.azurecr.io/sitioweb:latest .
+ docker images  
+ docker push *name*.azurecr.io/sitioweb:latest
+
+
+*** Tener la imagen en un registro de contenedores de Azure no la hace exclusiva de Azure, si privado ***
+
+
+Azure Container Registry (ACR) es un registro privado de imágenes de contenedores en la nube de Azure.
+
+En términos simples:
+
+Es como un Docker Hub, pero privado y dentro de tu cuenta de Azure.
+Ahí podés guardar, versionar y gestionar imágenes Docker de tus aplicaciones.
+Luego esas imágenes se usan para desplegar contenedores en servicios como:
+Kubernetes (AKS)
+Azure Container Instances
+Apps propias en Docker
+
+
+
+
+Modelos de red en docker

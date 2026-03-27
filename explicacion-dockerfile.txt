@@ -1,0 +1,421 @@
+Esto es un Dockerfile multistage para una app .NET.
+La idea principal es:
+
+1. usar una imagen pesada para COMPILAR
+2. usar una imagen más liviana para EJECUTAR
+3. copiar solo el resultado final al contenedor definitivo
+
+Eso hace que la imagen final sea mucho más chica.
+
+----------------------------------------------------------------
+DOCKERFILE
+----------------------------------------------------------------
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build-env
+WORKDIR /App
+
+COPY . ./
+RUN dotnet restore
+RUN dotnet publish -c Release -o out
+
+FROM mcr.microsoft.com/dotnet/runtime:10.0-alpine
+WORKDIR /App
+COPY --from=build-env /App/out .
+ENTRYPOINT ["dotnet", "Dependencies.dll"]
+
+----------------------------------------------------------------
+1) FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build-env
+----------------------------------------------------------------
+
+Qué hace:
+- Arranca una etapa nueva del build.
+- Usa como base la imagen oficial de .NET SDK versión 10.0 sobre Alpine.
+- Le pone un alias a esta etapa: build-env.
+
+Qué significa cada parte:
+- FROM: indica la imagen base desde la cual se construye.
+- mcr.microsoft.com/dotnet/sdk:10.0-alpine:
+  - mcr.microsoft.com = registry de Microsoft
+  - dotnet/sdk = imagen que trae el SDK de .NET
+  - 10.0-alpine = versión 10.0 y base Alpine Linux
+- AS build-env = nombre interno de esta etapa para poder referenciarla después.
+
+Por qué se usa sdk:
+- Porque para compilar una app .NET necesitás:
+  - dotnet restore
+  - dotnet build
+  - dotnet publish
+- Todo eso requiere el SDK, no solo el runtime.
+
+Por qué alpine:
+- Alpine es una distro muy liviana.
+- Hace que incluso la imagen de compilación sea más chica que otras basadas en Debian/Ubuntu.
+
+Importante:
+- Esta etapa NO es la imagen final que va a correr en producción.
+- Es solo la “mesa de trabajo” donde compilás.
+
+----------------------------------------------------------------
+2) WORKDIR /App
+----------------------------------------------------------------
+
+Qué hace:
+- Define el directorio de trabajo actual dentro del contenedor.
+- A partir de acá, los comandos siguientes se ejecutan parados en /App.
+
+Equivalente conceptual:
+- Es como hacer un:
+  cd /App
+
+Pero no exactamente una vez, sino que Docker deja configurado ese directorio como contexto por defecto para las siguientes instrucciones.
+
+Qué pasa si /App no existe:
+- Docker lo crea automáticamente.
+
+Por qué se usa:
+- Para no tener que escribir rutas largas en cada instrucción.
+- Ordena mejor el build.
+
+Entonces después de esto:
+- COPY . ./ copia cosas dentro de /App
+- RUN dotnet restore se ejecuta dentro de /App
+- RUN dotnet publish también
+
+----------------------------------------------------------------
+3) COPY . ./
+----------------------------------------------------------------
+
+Qué hace:
+- Copia todo el contenido del contexto de build de tu máquina local al directorio actual del contenedor.
+- Como el WORKDIR es /App, eso termina copiando todo dentro de /App.
+
+Desglose:
+- primer .  = origen, o sea el directorio actual de tu máquina desde donde ejecutaste docker build
+- segundo ./ = destino dentro del contenedor, relativo al WORKDIR actual (/App)
+
+Entonces en la práctica:
+- tu proyecto local -> /App dentro del contenedor
+
+Qué suele copiar:
+- .csproj
+- .sln
+- Program.cs
+- appsettings.json
+- carpetas del proyecto
+- cualquier otro archivo que no esté excluido por .dockerignore
+
+Muy importante:
+- COPY copia TODO lo que haya en el contexto, salvo lo excluido por .dockerignore.
+- Si no usás .dockerignore, capaz copiás basura:
+  - bin/
+  - obj/
+  - .git/
+  - node_modules/
+  - archivos temporales
+  - secretos
+
+Por qué esta línea funciona:
+- Porque para hacer restore y publish, el contenedor necesita tener el código fuente.
+
+Problema de esta forma:
+- No es la forma más óptima para cachear.
+- Porque si cambia cualquier archivo del proyecto, Docker invalida esta capa y vuelve a correr restore.
+- Una versión más eficiente suele copiar primero el .csproj, hacer restore, y recién después copiar el resto.
+
+Ejemplo más optimizado:
+- COPY *.csproj ./
+- RUN dotnet restore
+- COPY . ./
+- RUN dotnet publish ...
+
+Pero tu versión igual funciona, solo que puede recompilar más de lo necesario.
+
+----------------------------------------------------------------
+4) RUN dotnet restore
+----------------------------------------------------------------
+
+Qué hace:
+- Descarga y resuelve las dependencias NuGet del proyecto.
+
+Qué significa restore:
+- Lee el .csproj
+- Ve qué paquetes necesita la app
+- Los descarga
+- Prepara todo para poder compilar/publicar
+
+Ejemplo conceptual:
+- Si tu proyecto depende de:
+  - Newtonsoft.Json
+  - Dapper
+  - EntityFramework
+- dotnet restore baja esos paquetes.
+
+Por qué hace falta:
+- Porque sin dependencias resueltas no podés publicar la app.
+
+Qué genera:
+- Cache de paquetes de NuGet dentro del contenedor
+- Archivos/resolución necesarias para el build
+
+Relación con Docker layers:
+- RUN crea una capa nueva.
+- Si esta capa queda cacheada, futuros builds pueden ser más rápidos.
+- Pero como antes hiciste COPY . ./, cualquier cambio en el código probablemente invalida esta capa.
+
+----------------------------------------------------------------
+5) RUN dotnet publish -c Release -o out
+----------------------------------------------------------------
+
+Qué hace:
+- Publica la aplicación lista para ejecutarse.
+
+Desglose:
+- dotnet publish = compila y prepara los archivos finales para despliegue
+- -c Release = usa la configuración Release
+- -o out = guarda el resultado en la carpeta /App/out
+
+Qué diferencia hay entre build y publish:
+- build compila
+- publish compila y además prepara la salida final para deployment/ejecución
+
+En publish normalmente obtenés:
+- el .dll principal
+- dependencias .dll
+- archivos .json
+- runtimes necesarios según configuración
+- assets requeridos para ejecutar la app
+
+Por qué Release:
+- Porque es la configuración pensada para producción.
+- Generalmente aplica optimizaciones y evita usar Debug.
+
+Por qué output a out:
+- Para tener una carpeta clara con el resultado final.
+- Después esa carpeta es la que se copia a la imagen runtime.
+
+Muy importante:
+- Esta instrucción NO solo compila.
+- También arma el paquete final ejecutable de la app.
+
+Entonces al terminar esta línea:
+- en /App/out tenés la app lista para correr
+
+----------------------------------------------------------------
+6) FROM mcr.microsoft.com/dotnet/runtime:10.0-alpine
+----------------------------------------------------------------
+
+Qué hace:
+- Arranca una SEGUNDA etapa.
+- Esta vez usando una imagen distinta: runtime, no sdk.
+
+Esto es el corazón del multistage:
+- Primera etapa: compilar
+- Segunda etapa: ejecutar
+
+Diferencia entre sdk y runtime:
+- sdk:
+  - trae compilador
+  - herramientas de build
+  - restore, publish, etc.
+  - es más pesada
+- runtime:
+  - solo trae lo necesario para correr apps ya compiladas
+  - es más liviana
+
+Por qué esto baja el tamaño:
+- Porque la imagen final NO incluye:
+  - compilador
+  - herramientas del SDK
+  - caché de NuGet
+  - archivos temporales del build
+  - código fuente si no lo copiás
+- Solo incluye el runtime y la salida publicada
+
+Entonces:
+- aunque arriba hayas usado una imagen pesada,
+- esa imagen de compilación no queda en la imagen final,
+- salvo como parte del proceso de build en caché local de Docker.
+
+Ese es el gran beneficio.
+
+----------------------------------------------------------------
+7) WORKDIR /App
+----------------------------------------------------------------
+
+Se vuelve a definir el directorio de trabajo, pero ahora dentro de la segunda etapa.
+
+Ojo:
+- cada FROM inicia una etapa nueva
+- no “hereda” automáticamente el estado operativo de la etapa anterior
+- por eso se vuelve a poner WORKDIR /App
+
+A partir de acá:
+- el contenedor final trabajará desde /App
+
+----------------------------------------------------------------
+8) COPY --from=build-env /App/out .
+----------------------------------------------------------------
+
+Qué hace:
+- Copia archivos desde la etapa build-env hacia la etapa actual.
+
+Desglose:
+- COPY = copiar
+- --from=build-env = origen es otra etapa del Dockerfile, llamada build-env
+- /App/out = carpeta origen dentro de la etapa build-env
+- . = destino actual dentro de esta segunda etapa, o sea /App
+
+Entonces:
+- toma el resultado publicado en la primera etapa
+- lo copia al contenedor final
+
+Qué se está copiando realmente:
+- el output de dotnet publish
+- no el código fuente completo
+- no la caché de NuGet
+- no el SDK
+
+Por qué esto reduce tamaño:
+- Porque la imagen final recibe solo el artefacto publicado.
+- Todo el resto se descarta.
+
+Pensalo así:
+- etapa 1 = taller con herramientas, tornos, cajas, ruido, restos
+- etapa 2 = mostrador final donde solo ponés el producto terminado
+
+----------------------------------------------------------------
+9) ENTRYPOINT ["dotnet", "Dependencies.dll"]
+----------------------------------------------------------------
+
+Qué hace:
+- Define el comando principal que se ejecutará cuando el contenedor arranque.
+
+Formato:
+- JSON array / exec form
+- Es la forma recomendada
+
+Significa:
+- cuando el contenedor se inicia, ejecuta:
+  dotnet Dependencies.dll
+
+Eso hace que el runtime de .NET levante tu aplicación.
+
+Por qué se usa ENTRYPOINT:
+- Porque querés que el contenedor tenga un comportamiento fijo:
+  ejecutar tu app
+
+Diferencia conceptual con CMD:
+- ENTRYPOINT = comando principal del contenedor
+- CMD = argumentos por defecto o comando reemplazable más fácilmente
+
+En este caso:
+- el contenedor existe para correr esa app
+- entonces tiene sentido usar ENTRYPOINT
+
+Qué debe existir:
+- el archivo Dependencies.dll debe estar dentro de /App
+- y eso ocurre porque vino desde /App/out de la etapa anterior
+
+Si el .dll no coincide con el nombre real del proyecto:
+- el contenedor falla al arrancar
+
+----------------------------------------------------------------
+FLUJO COMPLETO DE PRINCIPIO A FIN
+----------------------------------------------------------------
+
+Paso 1:
+- Docker crea un contenedor temporal desde dotnet/sdk:10.0-alpine
+
+Paso 2:
+- entra a /App
+
+Paso 3:
+- copia tu código fuente
+
+Paso 4:
+- hace restore de dependencias
+
+Paso 5:
+- publica la app en /App/out
+
+Paso 6:
+- crea una segunda imagen temporal desde dotnet/runtime:10.0-alpine
+
+Paso 7:
+- entra a /App
+
+Paso 8:
+- copia desde la primera etapa SOLO /App/out
+
+Paso 9:
+- configura que al iniciar ejecute dotnet Dependencies.dll
+
+Resultado:
+- imagen final más limpia y más chica
+
+----------------------------------------------------------------
+POR QUÉ AHORA ES MÁS CHICA
+----------------------------------------------------------------
+
+Porque antes, en una imagen de una sola etapa, seguramente te quedabas con:
+- SDK completo
+- herramientas de compilación
+- paquetes descargados
+- código fuente
+- archivos intermedios
+- posiblemente bin/ y obj/
+- basura del proceso de build
+
+Con multistage:
+- todo eso vive solo en la etapa build
+- la imagen final contiene casi solo:
+  - runtime de .NET
+  - salida publicada
+
+Entonces el ahorro viene de:
+1. no incluir el SDK en producción
+2. no incluir el código fuente
+3. no incluir dependencias temporales de compilación
+4. no incluir cachés del build
+
+Eso puede reducir MUCHO el tamaño.
+
+----------------------------------------------------------------
+QUÉ CONTIENE LA IMAGEN FINAL Y QUÉ NO
+----------------------------------------------------------------
+
+Sí contiene:
+- base runtime de .NET
+- archivos publicados en /App
+- tu .dll principal
+- dependencias necesarias para correr
+
+No contiene:
+- SDK
+- código fuente original completo, salvo que se copie explícitamente
+- herramientas de compilación
+- salida previa del restore innecesaria
+- archivos fuente que no estén en /App/out
+
+----------------------------------------------------------------
+POR QUÉ NO SE EJECUTA dotnet restore EN LA SEGUNDA IMAGEN
+----------------------------------------------------------------
+
+Porque ya no hace falta compilar nada.
+La segunda imagen no construye la app.
+Solo la ejecuta.
+
+El trabajo pesado ya se hizo en la primera etapa.
+
+----------------------------------------------------------------
+POR QUÉ NO SE USA sdk EN LA IMAGEN FINAL
+----------------------------------------------------------------
+
+Porque sería desperdicio.
+Para ejecutar una app ya publicada alcanza con runtime.
+
+Usar sdk en producción:
+- aumenta tamaño
+- aumenta superficie de ataque
+- mete herramientas innecesarias
+- hace más lenta la descarga de imagen
